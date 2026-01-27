@@ -79,8 +79,8 @@ def plot_training_results(metrics, filename="results/training_results.png"):
     plt.close()
     print(f"Results plotted: {filename}")
 
-def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5-turbo"):
-    env = GenericCPSEnv()
+def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5-turbo", dataset_path=None):
+    env = GenericCPSEnv(dataset_path=dataset_path)
     
     # Obs Dim: 6 (Env) + 384 (LLM Context) = 390
     # State Dim (Central Critic): 390
@@ -226,7 +226,9 @@ if __name__ == "__main__":
     parser.add_argument("--provider", type=str, default="mock", choices=["mock", "huggingface", "openai"])
     parser.add_argument("--model", type=str, default="gpt-3.5-turbo")
     
+    parser.add_argument("--dataset", type=str, default=None, help="Path to TON_IoT CSV file. If None, uses simulated physics.")
+    
     args = parser.parse_args()
     
     # Pass args to train (need to update train signature/logic next)
-    train(mode=args.mode, episodes=args.episodes, provider=args.provider, model_name=args.model)
+    train(mode=args.mode, episodes=args.episodes, provider=args.provider, model_name=args.model, dataset_path=args.dataset)

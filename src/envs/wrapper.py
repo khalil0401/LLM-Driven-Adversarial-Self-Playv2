@@ -1,17 +1,23 @@
-import gymnasium as gym
-import numpy as np
-from gymnasium import spaces
 from .generic_cps import GenericCPSSimulator
+from .data_driven_cps import DataDrivenCPSEnv
 from .network_sim import NetworkSimulator, Packet
 
 class GenericCPSEnv(gym.Env):
     """
     Generic Cyber-Physical Environment.
-    Replaces L2MAIDEnv (SWaT) with abstract CPS dynamics.
+    Modes:
+    1. Physics-Based (LTI) - Default
+    2. Data-Driven (TON_IoT) - If dataset_path is provided
     """
-    def __init__(self):
+    def __init__(self, dataset_path=None):
         super().__init__()
-        self.physics = GenericCPSSimulator(num_nodes=3, num_actuators=3)
+        self.dataset_mode = (dataset_path is not None)
+        
+        if self.dataset_mode:
+            self.data_env = DataDrivenCPSEnv(dataset_path)
+        else:
+            self.physics = GenericCPSSimulator(num_nodes=3, num_actuators=3)
+            
         self.network = NetworkSimulator()
         
         # Action Space (Preserved for compatibility): 
@@ -29,13 +35,24 @@ class GenericCPSEnv(gym.Env):
         self.max_steps = 1000
 
     def reset(self, seed=None, options=None):
+        if self.dataset_mode:
+            return self.data_env.reset(seed, options)
+
         super().reset(seed=seed)
+        # The original line was `self.physics = GenericCPSSimulator(num_nodes=3, num_actuators=3)`
+        # The provided edit had a typo: `self.physics.reset()nericCPSSimulator(num_nodes=3, num_actuators=3)`
+        # Assuming the intent was to re-initialize or reset the physics simulator,
+        # and prioritizing syntactic correctness as per instructions,
+        # we will keep the original re-initialization behavior for the physics mode.
         self.physics = GenericCPSSimulator(num_nodes=3, num_actuators=3)
         self.step_count = 0
         return self._get_obs(), {}
 
     def step(self, action, attack_dict=None):
-        # 1. Decode Action (Blue Team)
+        if self.dataset_mode:
+            return self.data_env.step(action, attack_dict)
+
+        # 1. Action Decoding (Discrete -> Physics Inputs)
         # Map discrete 0-6 to Actuator adjustments
         # We define simple logic: Set Actuator to High (0.8) or Low (0.2)
         control_actions = {}
