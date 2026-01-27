@@ -85,7 +85,14 @@ class GenericCPSSimulator:
         self.time += self.dt
         return self.state
 
-    def get_psi_metric(self) -> float:
+    def reset(self):
+        self.state = CPSState(
+            node_values=np.ones(self.num_nodes) * 0.5,
+            actuator_states=np.zeros(self.num_actuators)
+        )
+        self.time = 0.0
+
+    def get_psi(self) -> float:
         """
         Process Stability Index.
         1.0 = Perfect (All nodes at Target).
