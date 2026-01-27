@@ -200,6 +200,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
         if ep % 20 == 0:
             print(f"Ep {ep} | Avg PSI: {avg_psi:.3f} | Blue Loss: {loss_blue:.4f}")
             save_checkpoint(blue_agent, red_agent, ep)
+            plot_training_results(metrics)
             
     # Final Plot
     save_checkpoint(blue_agent, red_agent, episodes)
