@@ -53,9 +53,15 @@ class OrchestratorAgent:
         response = self.llm.generate(prompt, max_new_tokens=10)
         
         try:
-            # Simple parsing of the number
-            score = float(response.strip().split()[0]) # naive parse
-            return max(0.0, min(1.0, score))
-        except:
-            # Fallback if LLM output is messy
+            # Robust parsing using regex
+            import re
+            match = re.search(r"(\d+(\.\d+)?)", response)
+            if match:
+                score = float(match.group(1))
+                return max(0.0, min(1.0, score))
+            else:
+                raise ValueError("No number found")
+        except Exception as e:
+            # Fallback and Debug
+            print(f"LLM Parse Error: '{response}' | {e}")
             return 0.5
