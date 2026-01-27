@@ -10,7 +10,7 @@ import pandas as pd
 
 sys.path.append(os.getcwd())
 
-from src.envs.wrapper import L2MAIDEnv
+from src.envs.wrapper import GenericCPSEnv
 from src.agents.blue.tactical import MAPPOAgent
 from src.agents.red.learning import LearningRedAgent
 from src.agents.blue.orchestrator import OrchestratorAgent
@@ -80,7 +80,7 @@ def plot_training_results(metrics, filename="results/training_results.png"):
     print(f"Results plotted: {filename}")
 
 def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5-turbo"):
-    env = L2MAIDEnv()
+    env = GenericCPSEnv()
     
     # Obs Dim: 6 (Env) + 384 (LLM Context) = 390
     # State Dim (Central Critic): 390

@@ -31,11 +31,13 @@ class LearningRedAgent:
         self.obs_dim = obs_dim
         
         # Action space: 0=No-Op, 1=Stop P1, 2=Open MV1, 3=Close MV1, etc.
+        # 0=No-Op
+        # 1=Actuator_0 Off, 2=Actuator_2 Max, etc.
         self.action_map = {
-            1: {'P1': 0},       # Dos Pump 1
-            2: {'MV1': 1},      # Overflow Tank 1
-            3: {'MV1': 0},      # Starve Tank 2
-            4: {'P2': 0, 'P1': 1} # Imbalance
+            1: {'Actuator_0': 0.0},       # Dos Node 1 (Stop Input)
+            2: {'Actuator_2': 1.0},       # Max Node 2 (Overflow)
+            3: {'Actuator_2': 0.0},       # Min Node 2 (Starve)
+            4: {'Actuator_1': 0.0, 'Actuator_0': 1.0} # Imbalance
         }
         
     def get_action(self, obs: np.ndarray):
