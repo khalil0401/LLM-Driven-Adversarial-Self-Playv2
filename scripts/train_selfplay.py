@@ -111,8 +111,8 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
         # Episode Loop
         for t in range(200): # Max steps per episode
             # 1. Orchestrator: Generate Context & Safety Score
-            # Speed optimization: Only run every 10 steps or use cached
-            if t % 10 == 0:
+            # Speed optimization: Only run every 40 steps or use cached
+            if t % 40 == 0:
                 llm_context = orchestrator.act(env_obs)
                 llm_safety_score = orchestrator.evaluate_safety(env_obs)
             # else use previous values (implied by python scoping in loop, but need init)

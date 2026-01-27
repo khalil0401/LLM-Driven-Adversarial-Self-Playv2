@@ -41,13 +41,13 @@ class OrchestratorAgent:
         Query LLM to rate system safety (0.0 to 1.0).
         Used for Reward Shaping.
         """
-        prompt = f"""
+        prompt = f"""<|user|>
         Analyze the following industrial control system logs for safety and stability.
         Logs: {obs_log[-5:]}
         
         Rate the SAFETY of the system on a scale from 0.0 (Critical Failure/Attack) to 1.0 (Normal Operation).
-        Return ONLY the number.
-        """
+        Reply with ONLY the number (e.g., 0.8).<|end|>
+        <|assistant|>"""
 
         
         response = self.llm.generate(prompt, max_new_tokens=10)
