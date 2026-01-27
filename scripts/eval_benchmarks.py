@@ -7,94 +7,88 @@ from tqdm import tqdm
 
 sys.path.append(os.getcwd())
 
-from src.envs.wrapper import L2MAIDEnv
+from src.envs.wrapper import GenericCPSEnv
 from src.agents.blue.tactical import MAPPOAgent
 from src.agents.blue.orchestrator import OrchestratorAgent
 from src.agents.red.learning import LearningRedAgent
 
-def evaluate(checkpoint_path=None, episodes=10):
-    env = L2MAIDEnv()
+def evaluate(checkpoint_path, episodes=20, provider="mock", model="gpt-3.5-turbo"):
+    print(f"Loading environment and agents...")
+    env = GenericCPSEnv()
     
-    # Initialize Agents (Ideally load from checkpoint)
+    # Initialize Blue Agent
     blue_agent = MAPPOAgent(obs_dim=390, state_dim=390, action_dim=7)
-    orchestrator = OrchestratorAgent(provider="mock")
-    # Red agent is present but maybe we want to test against ScriptedRedAgent for standardized benchmarking
-    # Or test against the learned one.
     
-    # For robust eval, we should test against Scripted (Standard) AND Learned (Adaptive)
-    from src.agents.red.scripted import ScriptedRedAgent
-    red_agent_scripted = ScriptedRedAgent("attack_1")
+    # Initialize Orchestrator
+    orchestrator = OrchestratorAgent(provider=provider, model_name=model)
+    
+    # Initialize Red Agent (Adversarial) - We evaluate against the Learned Attacker to see if Blue can beat it
+    red_agent = LearningRedAgent(obs_dim=6, action_dim=5)
+    
+    # Load Checkpoint
+    if checkpoint_path and os.path.exists(checkpoint_path):
+        print(f"Loading checkpoint: {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path)
+        blue_agent.actor.load_state_dict(checkpoint['blue_actor'])
+        blue_agent.critic.load_state_dict(checkpoint['blue_critic'])
+        red_agent.policy.load_state_dict(checkpoint['red_policy'])
+    else:
+        print("WARNING: No checkpoint found or provided. Evaluating UNTRAINED agents.")
     
     metrics = {
         "psi": [],
-        "detection_rate": [], # We need to define what counts as 'detection'
-        "fpr": []
+        "reward": []
     }
     
     print(f"Starting Evaluation for {episodes} episodes...")
     
     for ep in tqdm(range(episodes)):
-        obs, _ = env.reset()
+        env_obs, _ = env.reset()
         episode_psi = []
+        episode_reward = 0
         
-        # We need to track if attack was present and if blue took mitigation
-        attack_active_steps = 0
-        mitigation_active_steps = 0
-        tp = 0
-        fp = 0
-        tn = 0
-        fn = 0
+        # Init Orchestrator Context
+        llm_context = orchestrator.act(env_obs)
         
         for t in range(200):
-            # 1. Orchestrate
-            ctx = orchestrator.act([obs])
-            full_obs = np.concatenate([obs, ctx])
+            # 1. Update Context every 50 steps
+            if t % 50 == 0:
+                llm_context = orchestrator.act(env_obs)
+                
+            full_obs = np.concatenate([env_obs, llm_context])
             
-            # 2. Blue Action
-            action_blue_idx, _ = blue_agent.get_action(full_obs)
+            # 2. Blue Action (Deterministic for eval recommended, but using stochastic for now as implemented)
+            # ideally blue_agent.get_action(deterministic=True)
+            action_blue, _ = blue_agent.get_action(full_obs)
             
-            # 3. Red Action (Scripted for Standard Benchmark)
-            # Attack 1 happens t=50 to 100
-            red_overrides = red_agent_scripted.get_action(t, [])
-            is_attack = (t >= 50 and t <= 100)
-            
-            # Apply Red
-            if red_overrides:
-                 for k, v in red_overrides.items():
-                    if k == 'P1': env.physics.state.pump_states[0] = v
+            # 3. Red Action (Adversarial)
+            action_red_idx, _, red_overrides = red_agent.get_action(env_obs)
             
             # 4. Step
-            next_obs, reward, term, trunc, info = env.step(action_blue_idx)
+            next_env_obs, reward, terminated, truncated, info = env.step(action_blue, attack_dict=red_overrides)
+            
             episode_psi.append(info['psi'])
+            episode_reward += reward
+            env_obs = next_env_obs
             
-            # 5. Calculate Classification Metrics (Heuristic)
-            # Action > 0 implies "Mitigation/Alert". Action 0 = No-Op.
-            is_mitigation = (action_blue_idx > 0)
-            
-            if is_attack:
-                if is_mitigation: tp += 1
-                else: fn += 1
-            else:
-                if is_mitigation: fp += 1
-                else: tn += 1
+            if terminated or truncated:
+                break
                 
-            obs = next_obs
-            
-        # Episode Metrics
-        avg_psi = np.mean(episode_psi)
-        metrics["psi"].append(avg_psi)
+        metrics["psi"].append(np.mean(episode_psi))
+        metrics["reward"].append(episode_reward)
         
-        # Avoid division by zero
-        dr = tp / (tp + fn) if (tp + fn) > 0 else 1.0
-        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-        
-        metrics["detection_rate"].append(dr)
-        metrics["fpr"].append(fpr)
-        
-    print("\n=== Evaluation Results ===")
-    print(f"Mean PSI: {np.mean(metrics['psi']):.4f} (Higher is Better)")
-    print(f"Detection Rate: {np.mean(metrics['detection_rate'])*100:.2f}%")
-    print(f"False Positive Rate: {np.mean(metrics['fpr'])*100:.2f}%")
+    print("\n=== Final Evaluation Results ===")
+    print(f"Average System Stability (PSI): {np.mean(metrics['psi']):.4f} (Target > 0.8)")
+    print(f"Average Episode Reward: {np.mean(metrics['reward']):.2f}")
+    print(f"Win Rate (PSI > 0.5): {np.mean(np.array(metrics['psi']) > 0.5) * 100:.1f}%")
 
 if __name__ == "__main__":
-    evaluate()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to checkpoint.pt")
+    parser.add_argument("--episodes", type=int, default=20)
+    parser.add_argument("--provider", type=str, default="mock")
+    parser.add_argument("--model", type=str, default="gpt-3.5-turbo")
+    
+    args = parser.parse_args()
+    
+    evaluate(args.checkpoint, args.episodes, args.provider, args.model)
