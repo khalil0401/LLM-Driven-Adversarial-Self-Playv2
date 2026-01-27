@@ -48,8 +48,9 @@ class OrchestratorAgent:
         Rate the SAFETY of the system on a scale from 0.0 (Critical Failure/Attack) to 1.0 (Normal Operation).
         Return ONLY the number.
         """
+
         
-        response = self.llm.generate(prompt)
+        response = self.llm.generate(prompt, max_new_tokens=10)
         
         try:
             # Simple parsing of the number

@@ -53,7 +53,7 @@ class LLMClient:
                 model_kwargs=kwargs
             )
             
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, max_new_tokens=50) -> str:
         if self.provider == "mock":
             return self._mock_response(prompt)
         
@@ -71,7 +71,7 @@ class LLMClient:
                 
         elif self.provider == "huggingface":
             # Simple generation
-            output = self.client(prompt, max_new_tokens=100)
+            output = self.client(prompt, max_new_tokens=max_new_tokens)
             return output[0]['generated_text']
             
     def _mock_response(self, prompt: str) -> str:
