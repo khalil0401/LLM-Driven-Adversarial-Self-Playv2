@@ -66,7 +66,7 @@ class GenericCPSSimulator:
         # Target is to maintain x around 0.5.
         # If input is 0.5 and decay balances, stable.
         
-        inputs = u * 0.2 # Gain
+        inputs = u * 0.05 # Gain Reduced for Stability
         
         # Diffusion/Coupling
         current_vals = self.state.node_values
