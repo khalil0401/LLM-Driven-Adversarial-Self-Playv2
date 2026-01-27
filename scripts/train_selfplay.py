@@ -146,6 +146,9 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
             # 4. Environment Step
             next_env_obs, reward_blue, terminated, truncated, info = env.step(action_blue)
             
+            if t % 50 == 0:
+                print(f"  [Ep {ep} Step {t}/200] Safety Score: {llm_safety_score:.2f} | PSI: {info['psi']:.2f}")
+
             psi = info['psi']
             
             # 5. Reward Engineering
