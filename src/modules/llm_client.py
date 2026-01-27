@@ -40,7 +40,6 @@ class LLMClient:
                 print("Quantization: Disabled - bitsandbytes not found")
             
             kwargs = {
-                "trust_remote_code": True,
                 "quantization_config": quant_config
             }
             if not quant_config:
@@ -50,6 +49,7 @@ class LLMClient:
                 "text-generation", 
                 model=model_name, 
                 device_map="auto",
+                trust_remote_code=True,
                 model_kwargs=kwargs
             )
             
