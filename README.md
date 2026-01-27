@@ -53,7 +53,14 @@ python scripts/train_selfplay.py --mode adversarial --episodes 500 --provider hu
 Run the system on real dataset traces. Upload `Train_Test_Network.csv` to your environment first.
 
 ```bash
-python scripts/train_selfplay.py --mode adversarial --episodes 500 --dataset /content/Train_Test_Network.csv --provider huggingface --model microsoft/Phi-3-mini-4k-instruct
+python scripts/train_selfplay.py --mode adversarial --episodes 500 --dataset "/content/Train_Test_Network.csv" --provider huggingface --model microsoft/Phi-3-mini-4k-instruct
+```
+
+### 3. Local Hybrid Execution (Windows/Linux)
+If you have the dataset locally (e.g., `data/TON/train_test_network.csv`):
+
+```bash
+python scripts/train_selfplay.py --mode adversarial --episodes 500 --dataset "data/TON/train_test_network.csv" --hybrid
 ```
 
 *Note: If the dataset file is not found, the system will automatically fall back to a synthetic IoT traffic generator.*

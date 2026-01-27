@@ -24,10 +24,66 @@ class TONIoTLoader:
         if self.filepath and os.path.exists(self.filepath):
             print(f"Loading TON_IoT from {self.filepath}...")
             df = pd.read_csv(self.filepath)
-            # Basic preprocessing would go here
-            # For now, we mock it if file doesn't exist for reproducibility logic
+            
+            # Select relevant columns
+            cols = ['src_port', 'dst_port', 'duration', 'src_bytes', 'dst_bytes', 'proto', 'conn_state', 'label']
+            
+            # Handle missing columns if partial dataset
+            available_cols = [c for c in cols if c in df.columns]
+            df = df[available_cols].copy()
+            
+            # Preprocessing: Categorical Encoding
+            if 'proto' in df.columns:
+                df['proto'] = pd.Categorical(df['proto']).codes
+            if 'conn_state' in df.columns:
+                df['conn_state'] = pd.Categorical(df['conn_state']).codes
+                
+            # Fill NaNs
+            df = df.fillna(0)
+            
+            # Store labels
+            if 'label' in df.columns:
+                self.labels = df['label'].values
+                feature_df = df.drop(columns=['label'])
+            else:
+                self.labels = np.zeros(len(df))
+                feature_df = df
+            
+            # Normalize Features
+            self.data = self.scaler.fit_transform(feature_df)
+            
+            # Pad to 3 dimensions if fewer features (Env expects 3 Nodes/Features roughly)
+            # Actually Env DataDrivenCPSEnv expects whatever data is returned.
+            # But obs space is Box(6). 
+            # We need to map these >6 features to 3 "Nodes" concept or PCA them.
+            # For simplicity, we select top 3 logical features for the "Node Values":
+            # Node 1 ~ Traffic Volume (src_bytes)
+            # Node 2 ~ Duration (duration)
+            # Node 3 ~ Connection State (conn_state)
+            
+            # Helper to map to 3 dim for compatibility with DataDrivenCPSEnv default 3-node view
+            # Or we update DataDrivenCPSEnv to handle correct dims. 
+            # Let's map key features to the first 3 columns for visual intuition.
+            
+            # Target Features: src_bytes, dst_bytes, duration
+            target_cols = ['src_bytes', 'dst_bytes', 'duration']
+            indices = [feature_df.columns.get_loc(c) for c in target_cols if c in feature_df.columns]
+            
+            if len(indices) >= 3:
+                self.data = self.data[:, indices[:3]] # Take top 3
+            else:
+                # Pad if not enough
+                current_dim = self.data.shape[1]
+                if current_dim < 3:
+                    padding = np.zeros((len(self.data), 3 - current_dim))
+                    self.data = np.hstack([self.data, padding])
+                self.data = self.data[:, :3] # Force 3 dim
+                
+            print(f"Loaded {len(self.data)} samples. Mapped to 3 CPS Nodes.")
+            
         else:
             print("Generating MOCK TON_IoT Data (Generic features)...")
+            # ... (Mock logic remains)
             # Generate synthetic data mimicking IoT traffic
             # 3 Nodes (Devices), 1000 steps
             # State: [Load, Temp, Network_Out]
