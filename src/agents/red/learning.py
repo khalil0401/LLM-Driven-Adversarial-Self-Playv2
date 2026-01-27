@@ -46,13 +46,14 @@ class LearningRedAgent:
         dist = Categorical(probs)
         action = dist.sample()
         log_prob = dist.log_prob(action)
+        entropy = dist.entropy()
         
         # Map integer to override dict
         overrides = self.action_map.get(action.item(), {})
         
-        return action.item(), log_prob, overrides
+        return action.item(), log_prob, entropy, overrides
 
-    def update(self, rewards, log_probs):
+    def update(self, rewards, log_probs, entropies):
         """
         Simple REINFORCE update for the Red Agent.
         Maximize Reward = (1.0 - PSI) [Damage]
@@ -75,12 +76,11 @@ class LearningRedAgent:
         self.optimizer.zero_grad()
         
         # Entropy Regularization (IEEE Rigor: Prevent policy collapse)
-        # H(pi) = -sum(p * log(p))
-        entropy = dist.entropy().mean()
+        entropy_mean = torch.stack(entropies).mean()
         entropy_coef = 0.01 
         
         # Minimize Loss = -(Reward + Entropy)
-        loss = torch.stack(policy_loss).sum() - (entropy_coef * entropy)
+        loss = torch.stack(policy_loss).sum() - (entropy_coef * entropy_mean)
         
         loss.backward()
         self.optimizer.step()

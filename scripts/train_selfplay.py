@@ -95,6 +95,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
     blue_mem = Memory()
     red_mem_logprobs = []
     red_mem_rewards = []
+    red_mem_entropies = []
     
     metrics = {
         "episode": [],
@@ -134,11 +135,12 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
             
             # 3. Red Agent: Attack Selection (if Adversarial)
             if mode == "adversarial":
-                action_red_idx, log_prob_red, red_overrides = red_agent.get_action(env_obs)
+                action_red_idx, log_prob_red, entropy_red, red_overrides = red_agent.get_action(env_obs)
             else:
                 red_overrides = {} # Scripted or No-op
                 action_red_idx = 0
                 log_prob_red = torch.tensor(0.0)
+                entropy_red = torch.tensor(0.0)
             
             # 4. Environment Step (With Adversarial Injection)
             next_env_obs, reward_blue, terminated, truncated, info = env.step(action_blue, attack_dict=red_overrides)
@@ -173,6 +175,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
             if mode == "adversarial":
                 red_mem_logprobs.append(log_prob_red)
                 red_mem_rewards.append(reward_red)
+                red_mem_entropies.append(entropy_red)
             
             env_obs = next_env_obs
             
@@ -185,9 +188,10 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
         
         loss_red = 0
         if mode == "adversarial":
-            loss_red = red_agent.update(red_mem_rewards, red_mem_logprobs)
+            loss_red = red_agent.update(red_mem_rewards, red_mem_logprobs, red_mem_entropies)
             red_mem_logprobs = []
             red_mem_rewards = []
+            red_mem_entropies = []
             
         # Metrics & Logging
         avg_psi = psi_accum / 200.0 # approx

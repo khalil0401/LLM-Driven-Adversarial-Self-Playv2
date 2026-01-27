@@ -62,7 +62,7 @@ def evaluate(checkpoint_path, episodes=20, provider="mock", model="gpt-3.5-turbo
             action_blue, _ = blue_agent.get_action(full_obs)
             
             # 3. Red Action (Adversarial)
-            action_red_idx, _, red_overrides = red_agent.get_action(env_obs)
+            action_red_idx, _, _, red_overrides = red_agent.get_action(env_obs)
             
             # 4. Step
             next_env_obs, reward, terminated, truncated, info = env.step(action_blue, attack_dict=red_overrides)
