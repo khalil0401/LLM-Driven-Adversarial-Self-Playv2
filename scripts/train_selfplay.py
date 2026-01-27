@@ -14,6 +14,8 @@ from src.envs.wrapper import L2MAIDEnv
 from src.agents.blue.tactical import MAPPOAgent
 from src.agents.red.learning import LearningRedAgent
 from src.agents.blue.orchestrator import OrchestratorAgent
+from src.modules.explanation import ExplainabilityAgent
+import datetime
 
 # Ensure directories exist
 os.makedirs("checkpoints", exist_ok=True)
@@ -88,6 +90,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
     red_agent = LearningRedAgent(obs_dim=6, action_dim=5)
     
     orchestrator = OrchestratorAgent(provider=provider, model_name=model_name)
+    explainer = ExplainabilityAgent(provider=provider)
     
     blue_mem = Memory()
     red_mem_logprobs = []
@@ -107,6 +110,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
         env_obs, _ = env.reset()
         score = 0
         psi_accum = 0
+        episode_trace = []
         
         # Episode Loop
         for t in range(200): # Max steps per episode
@@ -136,15 +140,11 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
                 action_red_idx = 0
                 log_prob_red = torch.tensor(0.0)
             
-            # Apply Red Overrides hack
-            # In real Env, we'd pass red_action to step()
-            if red_overrides:
-                 for k, v in red_overrides.items():
-                    if k == 'P1': env.physics.state.pump_states[0] = v
-                    if k == 'MV1': env.physics.state.valve_states[0] = v
+            # 4. Environment Step (With Adversarial Injection)
+            next_env_obs, reward_blue, terminated, truncated, info = env.step(action_blue, attack_dict=red_overrides)
             
-            # 4. Environment Step
-            next_env_obs, reward_blue, terminated, truncated, info = env.step(action_blue)
+            # Trace: (Time, State, BlueAct, RedAct, PSI)
+            episode_trace.append((t, env_obs[:3], action_blue, action_red_idx, info['psi']))
             
             if t % 50 == 0:
                 print(f"  [Ep {ep} Step {t}/200] Safety Score: {llm_safety_score:.2f} | PSI: {info['psi']:.2f}")
@@ -201,6 +201,13 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
             print(f"Ep {ep} | Avg PSI: {avg_psi:.3f} | Blue Loss: {loss_blue:.4f}")
             save_checkpoint(blue_agent, red_agent, ep)
             plot_training_results(metrics)
+            
+        if ep % 50 == 0:
+            print(f"Generating Explanation for Ep {ep}...")
+            explanation = explainer.explain_episode(episode_trace, metrics)
+            with open("results/explanations.txt", "a") as f:
+                f.write(f"\n--- Episode {ep} [{datetime.datetime.now()}] ---\n")
+                f.write(explanation + "\n")
             
     # Final Plot
     save_checkpoint(blue_agent, red_agent, episodes)

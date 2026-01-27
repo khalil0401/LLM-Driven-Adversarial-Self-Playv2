@@ -34,7 +34,7 @@ class L2MAIDEnv(gym.Env):
         self.step_count = 0
         return self._get_obs(), {}
 
-    def step(self, action):
+    def step(self, action, attack_dict=None):
         # 1. Decode Action (Blue Team)
         control_actions = {}
         if action == 1: control_actions['P1'] = 1
@@ -43,6 +43,10 @@ class L2MAIDEnv(gym.Env):
         elif action == 4: control_actions['P2'] = 0
         elif action == 5: control_actions['MV1'] = 1
         elif action == 6: control_actions['MV1'] = 0
+        
+        # 1.5 Apply Red Team Overrides (Adversarial Supremacy)
+        if attack_dict:
+            control_actions.update(attack_dict)
         
         # 2. Step Physics
         state = self.physics.step(control_actions)

@@ -71,7 +71,15 @@ class LearningRedAgent:
             policy_loss.append(-log_prob * R)
             
         self.optimizer.zero_grad()
-        loss = torch.stack(policy_loss).sum()
+        
+        # Entropy Regularization (IEEE Rigor: Prevent policy collapse)
+        # H(pi) = -sum(p * log(p))
+        entropy = dist.entropy().mean()
+        entropy_coef = 0.01 
+        
+        # Minimize Loss = -(Reward + Entropy)
+        loss = torch.stack(policy_loss).sum() - (entropy_coef * entropy)
+        
         loss.backward()
         self.optimizer.step()
         
