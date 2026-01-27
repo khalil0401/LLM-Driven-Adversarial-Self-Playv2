@@ -1,9 +1,6 @@
-import gymnasium as gym
-import numpy as np
-from gymnasium import spaces
-from src.data_loader import TONIoTLoader
+from src.envs.base import BaseCPSEnv
 
-class DataDrivenCPSEnv(gym.Env):
+class DataDrivenCPSEnv(BaseCPSEnv):
     """
     Data-Driven CPS Environment (TON_IoT).
     Replays real dataset sequences + Supports Red/Blue adversarial modifications.
