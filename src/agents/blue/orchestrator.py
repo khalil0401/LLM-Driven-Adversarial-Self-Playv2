@@ -9,8 +9,8 @@ class OrchestratorAgent:
     2. Prompts LLM
     3. Generates Context Embedding (L_t) for RL Agents
     """
-    def __init__(self, provider="mock", wrapping_dim=16):
-        self.llm = LLMClient(provider=provider)
+    def __init__(self, provider="mock", model_name="gpt-3.5-turbo", wrapping_dim=16):
+        self.llm = LLMClient(provider=provider, model_name=model_name)
         # Use a small, fast model for embedding
         self.embedder = SentenceTransformer('all-MiniLM-L6-v2') 
         self.raw_embedding_dim = 384
