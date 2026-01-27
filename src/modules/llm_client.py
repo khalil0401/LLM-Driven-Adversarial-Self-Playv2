@@ -49,7 +49,7 @@ class LLMClient:
                 "text-generation", 
                 model=model_name, 
                 device_map="auto",
-                trust_remote_code=True,
+                trust_remote_code=False,
                 model_kwargs=kwargs
             )
             
