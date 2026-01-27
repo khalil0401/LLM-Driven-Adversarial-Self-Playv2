@@ -6,8 +6,8 @@ class ExplainabilityAgent:
     Extension C: Generative Explainability.
     Post-hoc analysis of episode trajectories to explain WHY agents acted.
     """
-    def __init__(self, provider="mock"):
-        self.llm = LLMClient(provider=provider)
+    def __init__(self, provider="mock", model_name="gpt-3.5-turbo"):
+        self.llm = LLMClient(provider=provider, model_name=model_name)
         
     def explain_episode(self, episode_trace: list, metrics: dict) -> str:
         """

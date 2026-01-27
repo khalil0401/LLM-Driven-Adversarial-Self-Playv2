@@ -90,7 +90,7 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
     red_agent = LearningRedAgent(obs_dim=6, action_dim=5)
     
     orchestrator = OrchestratorAgent(provider=provider, model_name=model_name)
-    explainer = ExplainabilityAgent(provider=provider)
+    explainer = ExplainabilityAgent(provider=provider, model_name=model_name)
     
     blue_mem = Memory()
     red_mem_logprobs = []
