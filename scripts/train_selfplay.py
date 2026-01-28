@@ -191,7 +191,19 @@ def run_training_stage(env, blue_agent, red_agent, orchestrator, explainer, epis
                 
     return metrics
 
-def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5-turbo", dataset_path=None, hybrid=False):
+def load_checkpoint(blue_agent, red_agent, filename):
+    """Loads model weights."""
+    path = f"checkpoints/{filename}"
+    if os.path.exists(path):
+        checkpoint = torch.load(path)
+        blue_agent.actor.load_state_dict(checkpoint['blue_actor'])
+        blue_agent.critic.load_state_dict(checkpoint['blue_critic'])
+        red_agent.policy.load_state_dict(checkpoint['red_policy'])
+        print(f"Checkpoint loaded: {path}")
+    else:
+        print(f"Checkpoint not found: {path} (Starting fresh)")
+
+def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5-turbo", dataset_path=None, hybrid=False, resume=False):
     set_seed(42)  # IEEE Reproducibility
     
     # Initialize Agents (Shared across stages)
@@ -204,6 +216,9 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
     if hybrid:
         # STAGE 1: Physics Pretraining
         print("\n>>> STAGE 1: PHYSICS-BASED PRETRAINING <<<")
+        if resume:
+            load_checkpoint(blue_agent, red_agent, "checkpoint_stage1_physics.pt")
+            
         env_physics = GenericCPSPhysicsEnv()
         run_training_stage(env_physics, blue_agent, red_agent, orchestrator, explainer, 
                          episodes=episodes//2, stage_name="stage1_physics", mode=mode)
@@ -212,6 +227,16 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
         
         # STAGE 2: Data-Driven Transfer
         print("\n>>> STAGE 2: DATA-DRIVEN TRANSFER (TON_IoT) <<<")
+        # Note: If resuming stage 2 specifically, one might want to load stage 2 checkpoint logic.
+        # But usually resume implies loading the latest available relevant state.
+        # For simplicity in hybrid, we assume resume loads the end of stage 1 if available, or stage 2 if specifically targeting that.
+        # Let's simple try to load stage 2 if it exists, else stage 1.
+        if resume:
+             if os.path.exists("checkpoints/checkpoint_stage2_data.pt"):
+                  load_checkpoint(blue_agent, red_agent, "checkpoint_stage2_data.pt")
+             elif os.path.exists("checkpoints/checkpoint_stage1_physics.pt"):
+                  load_checkpoint(blue_agent, red_agent, "checkpoint_stage1_physics.pt")
+
         env_data = DataDrivenCPSEnv(dataset_path=dataset_path)
         run_training_stage(env_data, blue_agent, red_agent, orchestrator, explainer, 
                          episodes=episodes//2, stage_name="stage2_data", mode=mode)
@@ -227,6 +252,9 @@ def train(mode="adversarial", episodes=500, provider="mock", model_name="gpt-3.5
             env = GenericCPSPhysicsEnv()
             name = "physics_only"
             
+        if resume:
+            load_checkpoint(blue_agent, red_agent, f"checkpoint_{name}.pt")
+            
         run_training_stage(env, blue_agent, red_agent, orchestrator, explainer, 
                          episodes=episodes, stage_name=name, mode=mode)
         save_checkpoint(blue_agent, red_agent, f"checkpoint_{name}.pt")
@@ -239,8 +267,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="gpt-3.5-turbo")
     parser.add_argument("--dataset", type=str, default=None, help="Path to TON_IoT CSV")
     parser.add_argument("--hybrid", action="store_true", help="Enable Two-Stage Hybrid Training")
+    parser.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
     
     args = parser.parse_args()
     
     train(mode=args.mode, episodes=args.episodes, provider=args.provider, 
-          model_name=args.model, dataset_path=args.dataset, hybrid=args.hybrid)
+          model_name=args.model, dataset_path=args.dataset, hybrid=args.hybrid, resume=args.resume)
