@@ -10,3 +10,4 @@ venv/
 checkpoints/
 *.pt
  wandb/
+data/
