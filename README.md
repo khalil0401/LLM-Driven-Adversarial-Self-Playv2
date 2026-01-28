@@ -65,21 +65,18 @@ python scripts/train_selfplay.py --mode adversarial --episodes 500 --dataset "da
 
 *Note: If the dataset file is not found, the system will automatically fall back to a synthetic IoT traffic generator.*
 
-## 💻 Local Installation
+### 4. Resuming Training
+To resume training from the last saved checkpoint, simply add the `--resume` flag:
 
 ```bash
-# 1. Install Dependencies
-pip install -r requirements.txt
-
-# 2. Run Training (Mock LLM - Fast CPU)
-python scripts/train_selfplay.py --mode adversarial --episodes 100 --provider mock
+python scripts/train_selfplay.py --mode adversarial --episodes 500 --dataset "/content/Train_Test_Network.csv" --resume
 ```
 
 ## 📊 Outputs
 
-*   **Plots**: `results/training_results.png` (Updated live).
-*   **Explanations**: `results/explanations.txt` (Generated every 50 episodes).
-*   **Checkpoints**: `checkpoints/` (Saved weights).
+*   **Plots**: `results/hybrid_experiment/results_{stage}.png` (Real-time learning curves for PSI, Reward, Loss).
+*   **Explanations**: `results/hybrid_experiment/explanations_{stage}.txt` (LLM-generated root cause analysis).
+*   **Checkpoints**: `checkpoints/*.pt` (Saved model weights for Blue/Red agents).
 
 ## 📜 Citation
 
