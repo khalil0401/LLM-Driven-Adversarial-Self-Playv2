@@ -24,7 +24,8 @@ class ExplainabilityAgent:
             return "Episode Summary: Uneventful. System remained stable."
             
         # 2. Construct Prompt
-        prompt = "You are a Cyber-Physical Security Analyst. Explain the following sequence:\n"
+        prompt = "You are a Cyber-Physical Security Analyst. Explain the following sequence.\n"
+        prompt += "Note: PSI = Process Stability Index (0.0=Crash, 1.0=Stable). Higher is better.\n"
         for cm in critical_moments[-10:]: # Context window limit
             t, s, a, red, psi = cm
             prompt += f"- T={t}: PSI={psi:.3f}. Blue Action={a}. Potential Attack={red}.\n"

@@ -138,8 +138,8 @@ def run_training_stage(env, blue_agent, red_agent, orchestrator, explainer, epis
             episode_trace.append((t, env_obs[:3], action_blue, action_red_idx, info['psi']))
             
             psi = info['psi']
-            reward_blue += (0.5 * llm_safety_score)
-            reward_red = (1.0 - psi) * 10.0
+            reward_blue += (1.0 * psi) + (0.5 * llm_safety_score)
+            reward_red = (1.0 - psi) * 2.0
             
             score += reward_blue
             psi_accum += psi
